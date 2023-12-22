@@ -26,6 +26,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const submitCollection = client.db("formBuilder").collection("submits");
     const formCollection = client.db("formBuilder").collection("forms");
     const applicationCollection = client
       .db("formBuilder")
@@ -118,6 +119,40 @@ async function run() {
         res.status(500).json({ error: "Internal Server Error" });
       } finally {
         // Close the MongoDB connection
+        // await client.close();
+      }
+    });
+
+    // submit collections
+    app.post("/submits", async (req, res) => {
+      try {
+        // Connect to MongoDB
+        await client.connect();
+
+        const database = client.db("formBuilder");
+        const submitCollection = database.collection("submitCollection"); // Change collection name
+
+        // Extract form data from the request body
+        const formData = req.body;
+
+        // Generate a new ObjectId for submitCollection
+        const submissionId = new ObjectId();
+        const submissionData = { _id: submissionId, ...formData };
+
+        // Insert the form data into the MongoDB collection
+        const result = await submitCollection.insertOne(submissionData);
+
+        // Send a response indicating success and the inserted document's ID
+        res.json({
+          message: "Form submitted successfully",
+          submissionId: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        // Send a 500 Internal Server Error response if an error occurs
+        res.status(500).json({ error: "Internal Server Error" });
+      } finally {
+        // Close the MongoDB connection (optional)
         // await client.close();
       }
     });
