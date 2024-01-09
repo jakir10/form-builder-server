@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const { writeFileSync } = require("fs");
-const ExcelJS = require("exceljs");
+// const { writeFileSync } = require("fs");
+// const ExcelJS = require("exceljs");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -34,105 +34,6 @@ async function run() {
       .db("formBuilder")
       .collection("applications");
 
-    // export database data to excel file
-    const ExcelJS = require("exceljs");
-    const { writeFileSync } = require("fs");
-
-    app.get("/export-applications-excel", async (req, res) => {
-      try {
-        // Connect to MongoDB
-        await client.connect();
-
-        const database = client.db("formBuilder");
-        const applicationCollection = database.collection(
-          "applicationCollection"
-        );
-
-        // Retrieve all fields without projection
-        const allApplications = await applicationCollection.find({}).toArray();
-
-        // Create a new workbook and worksheet
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet("Applications");
-
-        // Define the columns including formData fields
-        const columns = [
-          "_id",
-          "insuranceName",
-          "headings",
-          "tableData",
-          "slNo", // Add slNo
-          "elements",
-          "unauditedColumns",
-          // Add other fields as needed
-          // ... (formData fields will be added dynamically)
-        ];
-
-        // Add headers to worksheet
-        worksheet.addRow(columns);
-
-        // Add data rows
-        allApplications.forEach((applicationData) => {
-          // Exclude certain fields (input fields, placeholders, etc.) from the formData
-          const modifiedFormData = filterFormData(applicationData.formData);
-
-          // Create an object with all fields, including formData fields
-          const rowObject = {
-            _id: applicationData._id,
-            insuranceName: applicationData.insuranceName,
-            headings: applicationData.headings,
-            tableData: applicationData.tableData,
-            slNo: applicationData.slNo,
-            elements: applicationData.elements,
-            unauditedColumns: applicationData.unauditedColumns,
-            // Add other fields as needed
-            ...modifiedFormData,
-          };
-
-          // Extract values based on column order
-          const values = columns.map((column) => rowObject[column]);
-
-          // Add the values to the worksheet
-          worksheet.addRow(values);
-        });
-
-        // Save Excel file
-        const excelFilePath =
-          "C:\\Users\\DELL\\Desktop\\Redux\\job-intern-projeacts\\sadek vai project\\form-builder-server\\excel_file\\applications_data_exceljs_all_fields.xlsx";
-        await workbook.xlsx.writeFile(excelFilePath);
-
-        // Send the Excel file as a response
-        res.download(
-          excelFilePath,
-          "applications_data_exceljs_all_fields.xlsx",
-          () => {
-            // After sending the file, delete it from the server
-            writeFileSync(excelFilePath, "");
-          }
-        );
-      } catch (error) {
-        console.error("Error exporting applications data to Excel:", error);
-        res.status(500).json({ error: "Internal Server Error" });
-      } finally {
-        // Close the MongoDB connection (optional)
-        // await client.close();
-      }
-    });
-
-    // Function to filter unwanted fields from formData
-    function filterFormData(formData) {
-      // Modify this function based on your specific criteria
-      // For example, you can exclude fields with specific keys, like "input", "placeholder", etc.
-      const filteredFormData = Object.keys(formData).reduce((acc, key) => {
-        if (!key.includes("input") && !key.includes("placeholder")) {
-          acc[key] = formData[key];
-        }
-        return acc;
-      }, {});
-
-      return filteredFormData;
-    }
-
     // Post form
     app.post("/forms", async (req, res) => {
       const formData = req.body;
@@ -140,21 +41,6 @@ async function run() {
       const result = await formCollection.insertOne(formData);
       res.json({ message: "Form submitted successfully" });
     });
-
-    // get all forms
-    // app.get("/forms", async (req, res, next) => {
-    //   try {
-    //     // Retrieve all documents from the formCollection
-    //     const allForms = await formCollection.find().toArray();
-
-    //     // Respond with the array of form documents
-    //     res.json(allForms);
-    //   } catch (error) {
-    //     console.error("Error retrieving form data", error);
-    //     // Pass the error to the next middleware
-    //     next(error);
-    //   }
-    // });
 
     // submit form get
     app.get("/submits", async (req, res) => {
@@ -353,11 +239,6 @@ async function run() {
       }
     });
 
-    // app.put("/applications/applicationId", async (req, res) => {
-    //   const id = req.params.id;
-    //   const updateFormData = req.body;
-    //   console.log(updateFormData);
-    // });
     app.put("/application/:applicationId", async (req, res) => {
       try {
         await client.connect();
@@ -426,76 +307,56 @@ async function run() {
       }
     });
 
-    // update a application
-    // app.put("/applications/:applicationId", async (req, res) => {
-    //   try {
-    //     const { applicationId } = req.params;
+    app.patch("/applications/:id", async (req, res) => {
+      const applicationId = req.params.id;
 
-    //     if (!ObjectId.isValid(applicationId)) {
-    //       return res.status(400).json({ error: "Invalid application ID" });
-    //     }
+      try {
+        await client.connect();
 
-    //     const updatedData = req.body.formData; // Assuming your frontend sends formData
+        const database = client.db("formBuilder");
+        const applicationCollection = database.collection(
+          "applicationCollection"
+        );
 
-    //     await client.connect();
-    //     const database = client.db("formBuilder");
-    //     const applicationCollection = database.collection(
-    //       "applicationCollection"
-    //     );
+        const { inputValues } = req.body;
 
-    //     // Update the document based on the provided ID
-    //     const result = await applicationCollection.updateOne(
-    //       { _id: new ObjectId(applicationId) },
-    //       { $set: { formData: updatedData } }
-    //     );
+        // Find the existing document by applicationId
+        const existingApplication = await applicationCollection.findOne({
+          _id: new ObjectId(applicationId),
+        });
 
-    //     if (result.matchedCount === 0) {
-    //       return res.status(404).json({ error: "Application not found" });
-    //     }
+        if (!existingApplication) {
+          return res.status(404).json({ error: "Application not found" });
+        }
 
-    //     res.json({ message: "Application updated successfully" });
-    //   } catch (error) {
-    //     console.error(error);
-    //     res.status(500).json({ error: "Internal Server Error" });
-    //   } finally {
-    //     // Close the connection after updating
-    //     // await client.close();
-    //   }
-    // });
+        // Merge existing headings with new rows
+        const updatedData = {
+          inputValues: {
+            headings: existingApplication.inputValues.headings,
+            rows: inputValues.rows || existingApplication.inputValues.rows,
+          },
+          // Add more fields here if needed
+        };
 
-    // submit collections
-    // app.post("/submits", async (req, res) => {
-    //   try {
-    //     // Connect to MongoDB
-    //     await client.connect();
+        // Perform the update
+        const result = await applicationCollection.updateOne(
+          { _id: new ObjectId(applicationId) },
+          { $set: updatedData }
+        );
 
-    //     const database = client.db("formBuilder");
-    //     const submitCollection = database.collection("submitCollection");
-
-    //     // Extract form data from the request body
-    //     const formData = req.body;
-
-    //     // Generate a new ObjectId for submitCollection
-    //     const submissionId = new ObjectId();
-    //     const submissionData = { _id: submissionId, ...formData };
-
-    //     // Insert the form data into the MongoDB collection
-    //     const result = await submitCollection.insertOne(submissionData);
-
-    //     // Send a response indicating success and the inserted document's ID
-    //     res.json({
-    //       message: "Form submitted successfully",
-    //       submissionId: result.insertedId,
-    //     });
-    //   } catch (error) {
-    //     console.error("Error submitting form:", error);
-    //     // Send a 500 Internal Server Error response if an error occurs
-    //     res.status(500).json({ error: "Internal Server Error" });
-    //   } finally {
-    //     // Close the MongoDB connection (optional)
-    //     // await client.close();
-    //   }
-    // });
+        if (result.modifiedCount === 1) {
+          res.json({ message: "Data updated successfully" });
+        } else {
+          res.status(500).json({ error: "Failed to update data" });
+        }
+      } catch (error) {
+        console.error("Error updating data:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+      } finally {
+        // Close the MongoDB connection
+        // await client.close();
+      }
+    });
 
     // create tamplate submit
     app.post("/submits", async (req, res) => {
