@@ -317,7 +317,6 @@ async function run() {
         const applicationCollection = database.collection(
           "applicationCollection"
         );
-
         const { inputValues } = req.body;
 
         // Find the existing document by applicationId
