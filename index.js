@@ -317,6 +317,7 @@ async function run() {
         const applicationCollection = database.collection(
           "applicationCollection"
         );
+
         const { inputValues } = req.body;
 
         // Find the existing document by applicationId
@@ -328,19 +329,30 @@ async function run() {
           return res.status(404).json({ error: "Application not found" });
         }
 
-        // Merge existing headings with new rows
-        const updatedData = {
-          inputValues: {
-            headings: existingApplication.inputValues.headings,
-            rows: inputValues.rows || existingApplication.inputValues.rows,
-          },
-          // Add more fields here if needed
-        };
+        // Update the headings and rows
+        const updatedHeadings =
+          inputValues.headings || existingApplication.inputValues.headings;
+        const updatedRows =
+          inputValues.rows || existingApplication.inputValues.rows;
 
-        // Perform the update
+        // Ensure that new headings are added
+        const mergedHeadings = [
+          ...existingApplication.inputValues.headings,
+          ...updatedHeadings.filter(
+            (heading) =>
+              !existingApplication.inputValues.headings.includes(heading)
+          ),
+        ];
+
         const result = await applicationCollection.updateOne(
           { _id: new ObjectId(applicationId) },
-          { $set: updatedData }
+          {
+            $set: {
+              "inputValues.headings": mergedHeadings,
+              "inputValues.rows": updatedRows,
+              // Add more fields here if needed
+            },
+          }
         );
 
         if (result.modifiedCount === 1) {
