@@ -312,7 +312,6 @@ async function run() {
 
       try {
         await client.connect();
-
         const database = client.db("formBuilder");
         const applicationCollection = database.collection(
           "applicationCollection"
@@ -320,37 +319,12 @@ async function run() {
 
         const { inputValues } = req.body;
 
-        // Find the existing document by applicationId
-        const existingApplication = await applicationCollection.findOne({
-          _id: new ObjectId(applicationId),
-        });
-
-        if (!existingApplication) {
-          return res.status(404).json({ error: "Application not found" });
-        }
-
-        // Update the headings and rows
-        const updatedHeadings =
-          inputValues.headings || existingApplication.inputValues.headings;
-        const updatedRows =
-          inputValues.rows || existingApplication.inputValues.rows;
-
-        // Ensure that new headings are added
-        const mergedHeadings = [
-          ...existingApplication.inputValues.headings,
-          ...updatedHeadings.filter(
-            (heading) =>
-              !existingApplication.inputValues.headings.includes(heading)
-          ),
-        ];
-
         const result = await applicationCollection.updateOne(
           { _id: new ObjectId(applicationId) },
           {
             $set: {
-              "inputValues.headings": mergedHeadings,
-              "inputValues.rows": updatedRows,
-              // Add more fields here if needed
+              "inputValues.headings": inputValues.headings,
+              "inputValues.rows": inputValues.rows,
             },
           }
         );
