@@ -324,6 +324,7 @@ async function run() {
           {
             $set: {
               "inputValues.headings": inputValues.headings,
+              "inputValues.headingsDataType": inputValues.headingsDataType,
               "inputValues.rows": inputValues.rows,
             },
           }
